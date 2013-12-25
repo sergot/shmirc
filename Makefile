@@ -6,7 +6,6 @@ SOURCES_CLIENT=src/client.c
 HEADERS=src/help.h \
 		src/msg.h \
 		src/settings.h
-OBJ_DIR=obj
 SRC_DIR=src
 SERVER=shm_server
 CLIENT=shm_client
