@@ -18,4 +18,4 @@ client:
 	$(CC) $(SOURCES_CLIENT) $(SOURCES) $(HEADERS) $(LDFLAGS) -o $(CLIENT)
 
 clean:
-	rm -f obj/*.o $(EXECUTABLE)
+	rm -f $(SERVER) $(CLIENT)
