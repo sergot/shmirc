@@ -15,11 +15,13 @@
 #define TYPE_SERVER_MSG 1
 
 #include <sys/types.h>
+#include "settings.h"
 
 struct msg {
     int type;
     char read;
     pid_t pid;
+    char channel[MAX_CHAN_LEN];
     char cmd[MAX_CMD_LENGTH];
     char content[MAX_MSG_LENGTH];
 };

@@ -23,6 +23,8 @@ char first_char(char *);
 void cmd(char *, char *);
 int find_space(char *);
 void remove_cmd(char *);
+void first_word(char *, char *);
+void get_msg(char *, char *);
 
 #endif	/* HELP_H */
 

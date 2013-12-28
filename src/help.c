@@ -26,17 +26,36 @@ int find_space(char *s) {
 void remove_cmd(char *s) {
     int i = find_space(s);
     
-    memmove(s, s + i, strlen(s));
+    memmove(s, s + i + 1, strlen(s));
+}
+
+void first_word(char *s, char *dest) {
+    int i = find_space(s);
+    
+    if(i == -1) return;
+    
+    strncpy(dest, s, i+1);
+}
+
+void get_msg(char *s, char *dest) {
+    int i = find_space(s);
+    
+    strncpy(dest, s+i+1, MAX_MSG_LENGTH);
 }
 
 void cmd(char *s, char *cmd) {
-    strncpy(cmd, s + 1, find_space(s));
+    int len = find_space(s);
+    if(len == -1)
+        len = strlen(s);
+    else
+        len -= 1;
+    
+    strncpy(cmd, s + 1, len);
 }
 
 int getLine (char *prmpt, char *buff, size_t sz) {
     int ch, extra;
 
-    // Get line with buffer overrun protection.
     if (prmpt != NULL) {
         printf ("%s", prmpt);
         fflush (stdout);
@@ -44,7 +63,7 @@ int getLine (char *prmpt, char *buff, size_t sz) {
     if (fgets (buff, sz, stdin) == NULL)
         return IN_NO_INPUT;
 
-    // If it was too long, there'll be no newline. In that case, we flush
+    // if it was too long, there'll be no newline. In that case, we flush
     // to end of line so that excess doesn't affect the next call.
     if (buff[strlen(buff)-1] != '\n') {
         extra = 0;
@@ -53,7 +72,7 @@ int getLine (char *prmpt, char *buff, size_t sz) {
         return (extra == 1) ? IN_TOO_LONG : IN_OK;
     }
 
-    // Otherwise remove newline and give string back to caller.
+    // otherwise remove newline and give string back to caller.
     buff[strlen(buff)-1] = '\0';
     
     return IN_OK;

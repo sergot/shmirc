@@ -13,5 +13,8 @@
 #define SEM_PATH "/semirc"
 #define SEM_VALUE 0
 
+#define MAX_NAME_LEN 40
+#define MAX_CHAN_LEN 40
+
 #endif	/* SETTINGS_H */
 

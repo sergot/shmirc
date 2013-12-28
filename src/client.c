@@ -18,6 +18,7 @@
 #include "msg.h"
 #include "help.h"
 #include "settings.h"
+#include "user.h"
 
 int main(int argc, char **argv) {
     int shmfd,
@@ -43,21 +44,18 @@ int main(int argc, char **argv) {
     if(shm_msg == NULL)
         error("mmap()");
     
-    //int command = 0; // bool; if input is a command
-    
     pid_t pid;
     pid = getpid();
     
+    user *usr = new_user(pid, "",""); // this user
+    
     pid_t fid = fork();
     if(fid > 0) {
-        while(getLine("cmd> ", buff, sizeof(buff)) == IN_OK) {
-            //command = 0;
-            //printf("LOOP\n");
+        while(getLine("", buff, sizeof(buff)) == IN_OK) {
             while(shm_msg->read && shm_msg->read == '_') sleep(1);
 
             if(!shm_msg->read || shm_msg->read == '!') {
                 sem_wait(semfd);
-                //printf("ZAMYKAM\n");
 
                 shm_msg->pid = pid;
                 shm_msg->type = TYPE_CLIENT_MSG;
@@ -65,13 +63,8 @@ int main(int argc, char **argv) {
                 shm_msg->read = '_';
                 
                 if(first_char(buff) == '/') {
-                    //printf("TO JEST KURWA KOMENDA\n");
-                    //command = 1;
                     cmd(buff, shm_msg->cmd);
-                    //printf("cmd: %s\n", shm_msg->cmd);
-                    
                     remove_cmd(buff);
-                    //printf("buff: %s\n", buff);
                 } else {
                     snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "msg");
                 }
@@ -81,19 +74,35 @@ int main(int argc, char **argv) {
         }
     } else {
         while(1) {
+            fflush(stdout); fflush(stdin);
             if(shm_msg->read == '*') {
-                if(strncmp("resp", shm_msg->cmd, 4) == 0 && shm_msg->type == TYPE_SERVER_MSG && shm_msg->pid == pid) {
-                    //sem_wait(semfd);
+                if(strncmp("resp", shm_msg->cmd, 4) == 0 && shm_msg->pid == pid && shm_msg->type == TYPE_SERVER_MSG) {
                     printf("response: %s\n", shm_msg->content);
+                    
                     shm_msg->read = '!';
 
+                    char b[MAX_MSG_LENGTH];
+                    cmd(shm_msg->content, b);
+                    remove_cmd(shm_msg->content);
+                    
+                    if(strncmp(b, "join", 4) == 0) {
+                        strncpy(usr->channel, shm_msg->content, MAX_CHAN_LEN);
+                    } else if(strncmp(b, "name", 4) == 0) {
+                        strncpy(usr->name, shm_msg->content, MAX_NAME_LEN);
+                    } /*else if(strncmp(b, "pm", 2) == 0) {
+                        char name[MAX_NAME_LEN];
+                        
+                        first_word(shm_msg->content, name);
+                        remove_cmd(shm_msg->content); // remove first word
+                        printf("%s: %s\n", name, shm_msg->content);
+                        printf("...\n");
+                    }*/
+                    
                     sem_post(semfd);
-                    //printf("PODNOSZE\n");
                 } else if(strncmp("msg", shm_msg->cmd, 3) == 0) {
-                    if(shm_msg->pid != pid && shm_msg->read != '!') {
-                        //sem_post(semfd);
-                        //printf("PODNOSZE\n");
-                        printf("%s\n", shm_msg->content);
+                    if((strncmp(shm_msg->channel, usr->channel, MAX_CHAN_LEN) == 0) && shm_msg->pid != pid && shm_msg->read != '!') {
+                        //printf("%s:%s: %d\n", shm_msg->channel, usr->channel, strncmp(shm_msg->channel, usr->channel, MAX_CHAN_LEN));
+                        printf("\n%s\n", shm_msg->content);
                         shm_msg->read = '!';
                     }
                 }
