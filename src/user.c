@@ -86,3 +86,16 @@ void print_users(user *first_user) {
         u = u->next;
     }
 }
+
+int count_users_on_channel(char *channel, user *first_user) {
+    user *u = first_user;
+    int i = 0;
+
+    while(u != NULL) {
+        if(strncmp(u->channel, channel, strlen(channel)) == 0)
+            i++;
+        u = u->next;
+    }
+
+    return i;
+}

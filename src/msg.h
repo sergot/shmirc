@@ -21,6 +21,7 @@ struct msg {
     int type;
     char read;
     pid_t pid;
+    char from[MAX_NAME_LEN];
     char channel[MAX_CHAN_LEN];
     char cmd[MAX_CMD_LENGTH];
     char content[MAX_MSG_LENGTH];

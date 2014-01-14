@@ -32,5 +32,8 @@ char *get_user_channel(pid_t, user *);
 
 void print_users(user *);
 
+int count_users_on_channel(char *, user *);
+
+
 #endif	/* USER_H */
 

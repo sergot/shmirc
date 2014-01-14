@@ -102,7 +102,8 @@ int main(int argc, char **argv) {
                 } else if(strncmp("msg", shm_msg->cmd, 3) == 0) {
                     if((strncmp(shm_msg->channel, usr->channel, MAX_CHAN_LEN) == 0) && shm_msg->pid != pid && shm_msg->read != '!') {
                         //printf("%s:%s: %d\n", shm_msg->channel, usr->channel, strncmp(shm_msg->channel, usr->channel, MAX_CHAN_LEN));
-                        printf("\n%s\n", shm_msg->content);
+                        printf("[#%s] <%s> ", shm_msg->channel, shm_msg->from);
+                        printf("%s\n", shm_msg->content);
                         shm_msg->read = '!';
                     }
                 }
