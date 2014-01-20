@@ -34,7 +34,7 @@ void first_word(char *s, char *dest) {
     
     if(i == -1) return;
     
-    strncpy(dest, s, i+1);
+    strncpy(dest, s, i);
 }
 
 void get_msg(char *s, char *dest) {

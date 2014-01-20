@@ -51,6 +51,14 @@ int main(int argc, char **argv) {
     
     pid_t fid = fork();
     if(fid > 0) {
+        // register client
+        sem_wait(semfd);
+        shm_msg->read = '_';
+        shm_msg->pid = pid;
+        shm_msg->type = TYPE_CLIENT_MSG;
+        strncpy(shm_msg->cmd, "reg", MAX_CMD_LENGTH);
+        sem_post(semfd);
+
         while(getLine("", buff, sizeof(buff)) == IN_OK) {
             while(shm_msg->read && shm_msg->read == '_') sleep(1);
 
@@ -81,27 +89,22 @@ int main(int argc, char **argv) {
                     
                     shm_msg->read = '!';
 
-                    char b[MAX_MSG_LENGTH];
-                    cmd(shm_msg->content, b);
+                    char CMD[MAX_MSG_LENGTH];
+                    cmd(shm_msg->content, CMD);
                     remove_cmd(shm_msg->content);
                     
-                    if(strncmp(b, "join", 4) == 0) {
+                    if(strncmp(CMD, "join", 4) == 0) {
                         strncpy(usr->channel, shm_msg->content, MAX_CHAN_LEN);
-                    } else if(strncmp(b, "name", 4) == 0) {
+                    } else if(strncmp(CMD, "name", 4) == 0) {
                         strncpy(usr->name, shm_msg->content, MAX_NAME_LEN);
-                    } /*else if(strncmp(b, "pm", 2) == 0) {
-                        char name[MAX_NAME_LEN];
-                        
-                        first_word(shm_msg->content, name);
-                        remove_cmd(shm_msg->content); // remove first word
-                        printf("%s: %s\n", name, shm_msg->content);
-                        printf("...\n");
-                    }*/
+                    }
                     
                     sem_post(semfd);
+                } else if(strncmp("pm", shm_msg->cmd, 2) == 0 && shm_msg->pid == pid && shm_msg->type == TYPE_CLIENT_MSG) {
+                    printf("[PM -> %d] %s: %s\n", shm_msg->pid, shm_msg->from, shm_msg->content);
+                    shm_msg->read = '!';
                 } else if(strncmp("msg", shm_msg->cmd, 3) == 0) {
                     if((strncmp(shm_msg->channel, usr->channel, MAX_CHAN_LEN) == 0) && shm_msg->pid != pid && shm_msg->read != '!') {
-                        //printf("%s:%s: %d\n", shm_msg->channel, usr->channel, strncmp(shm_msg->channel, usr->channel, MAX_CHAN_LEN));
                         printf("[#%s] <%s> ", shm_msg->channel, shm_msg->from);
                         printf("%s\n", shm_msg->content);
                         shm_msg->read = '!';

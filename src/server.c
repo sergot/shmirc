@@ -76,13 +76,14 @@ int main(int argc, char **argv) {
     
     user *first_user = NULL;
     chann *first_channel = NULL;
+
+    char *resp = NULL;
     
     // open named semaphore
     semfd = sem_open(SEM_PATH, O_RDWR | O_CREAT | O_EXCL, S_IRWXU | S_IRWXG, 1);
     if(semfd == SEM_FAILED)
         error("sem_open()");
     
-    // weird?
     sem_post(semfd);
     
     // open named shared memory
@@ -101,11 +102,13 @@ int main(int argc, char **argv) {
     int command;
     while(1) {
         fflush(stdin); fflush(stdout);
+
+
         command = 0;
         if(shm_msg->read && shm_msg->read == '_') { // msg from client
             user *u = find_user(shm_msg->pid, first_user);
             if(u == NULL) {
-                u = new_user(shm_msg->pid, "", shm_msg->channel);
+                u = new_user(shm_msg->pid, "", "all");
                 if(first_user == NULL)
                     first_user = u;
                 else
@@ -120,8 +123,9 @@ int main(int argc, char **argv) {
             strncpy(shm_msg->from, u->name, MAX_NAME_LEN);
             
             shm_msg->read = '*';
-            
-            if(strncmp("msg", shm_msg->cmd, 3) != 0) {
+            if(strncmp("reg", shm_msg->cmd, 3) == 0) {
+                shm_msg->read = '!';
+            } else if(strncmp("msg", shm_msg->cmd, 3) != 0) {
                 shm_msg->type = TYPE_SERVER_MSG;
                 command = 1;
                 
@@ -148,12 +152,13 @@ int main(int argc, char **argv) {
                     
                     snprintf(shm_msg->content, MAX_MSG_LENGTH, "/name %s", name);
                 } else if(strncmp(shm_msg->cmd, "pm", 2) == 0) {
-                    char name_snd[MAX_NAME_LEN];
+                    char *name_snd = calloc(MAX_NAME_LEN + 1, sizeof(char));
                     
                     char msg_recv[MAX_MSG_LENGTH];
                     strncpy(msg_recv, shm_msg->content, MAX_MSG_LENGTH);
-                    printf("[????] %s, %s\n", msg_recv, name_snd);
                     first_word(msg_recv, name_snd);
+
+                    printf("NAME:|%s|\n", name_snd);
                     
                     get_msg(shm_msg->content, msg_recv);
                                         
@@ -161,32 +166,63 @@ int main(int argc, char **argv) {
                     strncpy(name_recv, get_user_name(shm_msg->pid, first_user), MAX_NAME_LEN);
                     shm_msg->pid = get_user_pid(name_snd, first_user);
                     
-                    snprintf(shm_msg->content, MAX_MSG_LENGTH, "/pm %s %s", name_snd, msg_recv);
+                    snprintf(shm_msg->content, MAX_MSG_LENGTH, "%s", msg_recv);
+                    printf("[PM] FROM: %s[%d], TO: %s[%d], MSG: %s\n", shm_msg->from, get_user_pid(shm_msg->from, first_user), name_snd, shm_msg->pid, shm_msg->content);
+
+                    shm_msg->type = TYPE_CLIENT_MSG;
                     if(find_user(shm_msg->pid, first_user) == NULL)
                         shm_msg->read = '!';
+
+                    shm_msg->pid = get_user_pid(name_snd, first_user);
+                    printf("-> %d\n", shm_msg->pid);
+                    free(name_snd);
                 } 
                 else if(strncmp(shm_msg->cmd, "info", 4) == 0) {
                     strncpy(shm_msg->content, "type /stats to get server statistics", MAX_MSG_LENGTH);
                 } else if(strncmp(shm_msg->cmd, "chans", 5) == 0) {
+                    resp = calloc(MAX_NAME_LEN, sizeof(char));
+                    resp[0] = '\0';
+
+                    char tmp[MAX_CHAN_LEN];
+
                     chann *ch = first_channel;
                     while(ch != NULL) {
-                        printf("%s\n", ch->name);
+                        printf("CHANNELS: %s\n", ch->name);
+                        snprintf(resp, MAX_MSG_LENGTH, "%s, %s", resp, ch->name);
+
+                        if(strlen(resp) >= MAX_MSG_LENGTH)
+                            break;
                         
                         ch = ch->next;
                     }
+
+                    strncpy(shm_msg->content, resp, MAX_MSG_LENGTH);
+                    free(resp);
                 } else if(strncmp(shm_msg->cmd, "users", 5) == 0) {
+                    resp = calloc(MAX_NAME_LEN, sizeof(char));
+                    resp[0] = '\0';
+
+                    char tmp[MAX_NAME_LEN];
+
                     user *u = first_user;
                     
                     while(u != NULL) {
-                        printf("%s\n", u->name);
+                        printf("USERS: %s\n", u->name);
+                        snprintf(tmp, MAX_NAME_LEN, "%s", u->name);
+                        snprintf(resp, MAX_MSG_LENGTH, "%s, %s", resp, u->name);
+
+                        if(strlen(resp) >= MAX_MSG_LENGTH)
+                            break;
                         
                         u = u->next;
                     }
-                } else if(strncmp(shm_msg->cmd, "users", 4) == 0) {
-                    strncpy(shm_msg->content, "type /stats to get server statistics", MAX_MSG_LENGTH);
+
+                    strncpy(shm_msg->content, resp, MAX_MSG_LENGTH);
+                    free(resp);
                 }
                 
-                snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "resp");
+                if(strncmp("pm", shm_msg->cmd, 2) != 0)
+                    snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "resp");
             } else {
                 strncpy(shm_msg->channel, u->channel, MAX_CHAN_LEN);
                 shm_msg->type = TYPE_CLIENT_MSG;
