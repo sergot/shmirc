@@ -49,21 +49,15 @@ void read_stats(char *filename, stats *s) {
                 if(buf[i] == '\n') {
                     if(line == 1) {
                         strncpy(file_line, buf, i);
-                        printf("FILELINE: %s | ", file_line);
                         s->channels = atoi(file_line);
-                        printf("ATOI: %d\n", s->channels);
                         pos = i;
                     } else if(line == 2) {
                         strncpy(file_line, buf+pos, i);
-                        printf("FILELINE: %s | ", file_line);
                         s->users = atoi(file_line);
-                        printf("ATOI: %d\n", s->users);
                         pos = i;
                     } else if(line == 3) {
                         strncpy(file_line, buf+pos, i);
-                        printf("FILELINE: %s | ", file_line);
                         s->messages = atoi(file_line);
-                        printf("ATOI: %d\n", s->messages);
                     }
                     line++;
                     continue;

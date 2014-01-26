@@ -76,9 +76,6 @@ int main(int argc, char **argv) {
     if (signal(SIGINT, clear) == SIG_ERR)
         error("signal()");
 
-    if (signal(SIGTERM, clear) == SIG_ERR)
-        error("signal()");
-
     if (signal(SIGABRT, clear) == SIG_ERR)
         error("signal()");
 
@@ -118,10 +115,15 @@ int main(int argc, char **argv) {
     st = calloc(1, sizeof(stats));
     read_stats("stats", st);
 
+    // add default channel
+    chann *new_chan = malloc(sizeof(chann));
+    strncpy(new_chan->name, "all", MAX_CHAN_LEN);
+    new_chan->next = NULL;
+    first_channel = new_chan;
+
     int command;
     while(1) {
         fflush(stdin); fflush(stdout);
-
 
         command = 0;
         if(shm_msg->read && shm_msg->read == '_') { // msg from client
@@ -137,8 +139,9 @@ int main(int argc, char **argv) {
                 snprintf(u->name, MAX_NAME_LEN, "%d", u->pid);
             }
             
-            printf("read: %s from %s in %s|\n", shm_msg->content, u->name, u->channel);
-            printf("cmd: |%s|\n", shm_msg->cmd);
+            printf("\n");
+            //printf("read: %s from %s in %s|\n", shm_msg->content, u->name, u->channel);
+            //printf("cmd: |%s|\n", shm_msg->cmd);
 
             strncpy(shm_msg->from, u->name, MAX_NAME_LEN);
             
@@ -179,8 +182,6 @@ int main(int argc, char **argv) {
                     strncpy(msg_recv, shm_msg->content, MAX_MSG_LENGTH);
                     first_word(msg_recv, name_snd);
 
-                    printf("NAME:|%s|\n", name_snd);
-                    
                     get_msg(shm_msg->content, msg_recv);
                                         
                     char name_recv[MAX_NAME_LEN];
@@ -188,58 +189,65 @@ int main(int argc, char **argv) {
                     shm_msg->pid = get_user_pid(name_snd, first_user);
                     
                     snprintf(shm_msg->content, MAX_MSG_LENGTH, "%s", msg_recv);
-                    printf("[PM] FROM: %s[%d], TO: %s[%d], MSG: %s\n", shm_msg->from, get_user_pid(shm_msg->from, first_user), name_snd, shm_msg->pid, shm_msg->content);
 
                     shm_msg->type = TYPE_CLIENT_MSG;
                     if(find_user(shm_msg->pid, first_user) == NULL)
                         shm_msg->read = '!';
 
                     shm_msg->pid = get_user_pid(name_snd, first_user);
-                    printf("-> %d\n", shm_msg->pid);
                     free(name_snd);
-                } 
-                else if(strncmp(shm_msg->cmd, "info", 4) == 0) {
+                } else if(strncmp(shm_msg->cmd, "info", 4) == 0) {
                     strncpy(shm_msg->content, "type /stats to get server statistics", MAX_MSG_LENGTH);
+                } else if(strncmp(shm_msg->cmd, "stats", 5) == 0) {
+                    snprintf(shm_msg->content, MAX_MSG_LENGTH, "channels: %d, users: %d, messages: %d", st->channels, st->users, st->messages);
                 } else if(strncmp(shm_msg->cmd, "chans", 5) == 0) {
-                    resp = calloc(MAX_NAME_LEN, sizeof(char));
-                    resp[0] = '\0';
-
-                    char tmp[MAX_CHAN_LEN];
+                    resp = calloc(MAX_MSG_LENGTH, sizeof(char));
 
                     chann *ch = first_channel;
+                    if(ch != NULL) {
+                        snprintf(resp, MAX_MSG_LENGTH, "%s", ch->name);
+                        ch = ch->next;
+                    }
+
                     while(ch != NULL) {
-                        printf("CHANNELS: %s\n", ch->name);
-                        snprintf(resp, MAX_MSG_LENGTH, "%s, %s", resp, ch->name);
+                        char *tmp = calloc(MAX_MSG_LENGTH, sizeof(char));
+                        snprintf(tmp, MAX_MSG_LENGTH, "%s, %s", resp, ch->name);
+                        snprintf(resp, MAX_MSG_LENGTH, "%s", tmp);
 
                         if(strlen(resp) >= MAX_MSG_LENGTH)
                             break;
                         
                         ch = ch->next;
+                        free(tmp);
                     }
 
                     strncpy(shm_msg->content, resp, MAX_MSG_LENGTH);
                     free(resp);
                 } else if(strncmp(shm_msg->cmd, "users", 5) == 0) {
-                    resp = calloc(MAX_NAME_LEN, sizeof(char));
-                    resp[0] = '\0';
-
-                    char tmp[MAX_NAME_LEN];
+                    resp = calloc(MAX_MSG_LENGTH, sizeof(char));
 
                     user *u = first_user;
-                    
+                    if(u != NULL) {
+                        snprintf(resp, MAX_MSG_LENGTH, "%s", u->name);
+                        u = u->next;
+                    }
+
                     while(u != NULL) {
-                        printf("USERS: %s\n", u->name);
-                        snprintf(tmp, MAX_NAME_LEN, "%s", u->name);
-                        snprintf(resp, MAX_MSG_LENGTH, "%s, %s", resp, u->name);
+                        char *tmp = calloc(MAX_MSG_LENGTH, sizeof(char));
+                        snprintf(tmp, MAX_MSG_LENGTH, "%s, %s", resp, u->name);
+                        snprintf(resp, MAX_MSG_LENGTH, "%s", tmp);
 
                         if(strlen(resp) >= MAX_MSG_LENGTH)
                             break;
                         
                         u = u->next;
+                        free(tmp);
                     }
 
                     strncpy(shm_msg->content, resp, MAX_MSG_LENGTH);
                     free(resp);
+                } else {
+                    strncpy(shm_msg->content, "WRONG COMMAND! available commands: /info, /chans, /users, /join <channel>, /name <newname>, /pm <username> <msg>.", MAX_MSG_LENGTH);
                 }
                 
                 if(strncmp("pm", shm_msg->cmd, 2) != 0)
@@ -251,9 +259,7 @@ int main(int argc, char **argv) {
                 snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "msg");
                 
                 strncpy(shm_msg->channel, get_user_channel(shm_msg->pid, first_user), MAX_CHAN_LEN);
-                printf("CHAN: %s\n\n", shm_msg->channel);
-                
-                printf("COUNT: %d\n\n", count_users_on_channel(shm_msg->channel, first_user));
+
                 if(count_users_on_channel(shm_msg->channel, first_user) < 2)
                     shm_msg->read = '!';
             }
@@ -261,8 +267,6 @@ int main(int argc, char **argv) {
             if(command == 0) {
                 sem_post(semfd);
             }
-            print_users(first_user);
-            printf("--------\n");
         }
     }
     
@@ -280,7 +284,7 @@ static void clear(int sig) {
     if(sem_unlink(SEM_PATH) != 0)
         error("sem_unlink()");
     
-    // TODO
-    printf("stats[%d,%d,%d]\n", st->channels, st->users, st->messages);
     write_stats("stats", st);
+
+    error("Bye! ");
 }

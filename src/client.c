@@ -48,15 +48,18 @@ int main(int argc, char **argv) {
     pid = getpid();
     
     user *usr = new_user(pid, "",""); // this user
+    strncpy(usr->channel, "all", 3);;
     
     pid_t fid = fork();
     if(fid > 0) {
         // register client
         sem_wait(semfd);
+
         shm_msg->read = '_';
         shm_msg->pid = pid;
         shm_msg->type = TYPE_CLIENT_MSG;
         strncpy(shm_msg->cmd, "reg", MAX_CMD_LENGTH);
+
         sem_post(semfd);
 
         while(getLine("", buff, sizeof(buff)) == IN_OK) {
@@ -85,6 +88,7 @@ int main(int argc, char **argv) {
             fflush(stdout); fflush(stdin);
             if(shm_msg->read == '*') {
                 if(strncmp("resp", shm_msg->cmd, 4) == 0 && shm_msg->pid == pid && shm_msg->type == TYPE_SERVER_MSG) {
+                    printf("\n");
                     printf("response: %s\n", shm_msg->content);
                     
                     shm_msg->read = '!';
@@ -92,7 +96,7 @@ int main(int argc, char **argv) {
                     char CMD[MAX_MSG_LENGTH];
                     cmd(shm_msg->content, CMD);
                     remove_cmd(shm_msg->content);
-                    
+
                     if(strncmp(CMD, "join", 4) == 0) {
                         strncpy(usr->channel, shm_msg->content, MAX_CHAN_LEN);
                     } else if(strncmp(CMD, "name", 4) == 0) {
