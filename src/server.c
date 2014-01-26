@@ -76,8 +76,9 @@ int main(int argc, char **argv) {
     if (signal(SIGINT, clear) == SIG_ERR)
         error("signal()");
 
-    if (signal(SIGABRT, clear) == SIG_ERR)
+    if (signal(SIGTERM, clear) == SIG_ERR)
         error("signal()");
+
 
     int shmfd, // shared memory file descriptor
         shm_seg_size = sizeof(struct msg); // max shm space size
