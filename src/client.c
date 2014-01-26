@@ -51,6 +51,8 @@ int main(int argc, char **argv) {
     strncpy(usr->channel, "all", 3);;
     
     pid_t fid = fork();
+
+    // input handling
     if(fid > 0) {
         // register client
         sem_wait(semfd);
@@ -62,6 +64,7 @@ int main(int argc, char **argv) {
 
         sem_post(semfd);
 
+        // get input line by line
         while(getLine("", buff, sizeof(buff)) == IN_OK) {
             while(shm_msg->read && shm_msg->read == '_') sleep(1);
 
@@ -83,6 +86,7 @@ int main(int argc, char **argv) {
                 snprintf(shm_msg->content, MAX_MSG_LENGTH, "%s", buff);
             }
         }
+    // reponse handling
     } else {
         while(1) {
             fflush(stdout); fflush(stdin);

@@ -2,6 +2,7 @@
 
 #include "user.h"
 
+// create and return new user
 user *new_user(pid_t pid, char *name, char *channel) {
     user *u = malloc(sizeof(user));
     
@@ -13,6 +14,7 @@ user *new_user(pid_t pid, char *name, char *channel) {
     return u;
 }
 
+// add user to list
 int add_user(user *new_user, user *first_user) {
     int i = 1;
     
@@ -27,6 +29,7 @@ int add_user(user *new_user, user *first_user) {
     return i;
 }
 
+// find user with specific pid
 user *find_user(pid_t pid, user *first_user) {
     user *u = first_user;
     
@@ -40,6 +43,7 @@ user *find_user(pid_t pid, user *first_user) {
     return NULL;
 }
 
+// get user's pid with specific username
 pid_t get_user_pid(char *name, user *first_user) {
     user *u = first_user;
     
@@ -52,6 +56,8 @@ pid_t get_user_pid(char *name, user *first_user) {
     
     return -1;
 }
+
+// get users'name with specific pid
 char *get_user_name(pid_t pid, user *first_user) {
     user *u = first_user;
     
@@ -64,6 +70,8 @@ char *get_user_name(pid_t pid, user *first_user) {
     
     return NULL;
 }
+
+// get user's channel
 char *get_user_channel(pid_t pid, user *first_user) {
     user *u = first_user;
     
@@ -77,6 +85,7 @@ char *get_user_channel(pid_t pid, user *first_user) {
     return NULL;
 }
 
+// print all users
 void print_users(user *first_user) {
     user *u = first_user;
     
@@ -87,6 +96,8 @@ void print_users(user *first_user) {
     }
 }
 
+
+// count how many users are on specific channel
 int count_users_on_channel(char *channel, user *first_user) {
     user *u = first_user;
     int i = 0;

@@ -1,16 +1,19 @@
 #include "help.h"
 #include "msg.h"
 
+// print error
 void error(char *s) {
     perror(s);
     
     exit(EXIT_FAILURE);
 }
 
+// get first char from string
 char first_char(char *s) {
     return *s;
 }
 
+// find first space in string
 int find_space(char *s) {
     int i;
     for(i = 0; i < strlen(s); i++)
@@ -23,12 +26,14 @@ int find_space(char *s) {
     return i;
 }
 
+// remove first word from string
 void remove_cmd(char *s) {
     int i = find_space(s);
     
     memmove(s, s + i + 1, strlen(s));
 }
 
+// copy first word
 void first_word(char *s, char *dest) {
     int i = find_space(s);
     
@@ -37,12 +42,14 @@ void first_word(char *s, char *dest) {
     strncpy(dest, s, i);
 }
 
+// copy message
 void get_msg(char *s, char *dest) {
     int i = find_space(s);
     
     strncpy(dest, s+i+1, MAX_MSG_LENGTH);
 }
 
+// copy cmd
 void cmd(char *s, char *cmd) {
     int len = find_space(s);
     if(len == -1)
@@ -53,6 +60,7 @@ void cmd(char *s, char *cmd) {
     strncpy(cmd, s + 1, len);
 }
 
+// get line from stdin
 int getLine (char *prmpt, char *buff, size_t sz) {
     int ch, extra;
 

@@ -38,6 +38,7 @@ typedef struct ch {
     struct ch *next;
 } chann;
 
+// add new channel to the list
 int add_channel(char *name, chann *first_channel) {
     int i = 1;
     
@@ -56,6 +57,7 @@ int add_channel(char *name, chann *first_channel) {
     return i;
 }
 
+// checks if channel already exists
 int chan_exists(char *name, chann *first_channel) {
     chann *u = first_channel;
     
@@ -69,13 +71,16 @@ int chan_exists(char *name, chann *first_channel) {
     return 0;
 }
 
+// statistics
 stats *st = NULL;
 
 int main(int argc, char **argv) {
     // signal handling
+    // CTRL+C 
     if (signal(SIGINT, clear) == SIG_ERR)
         error("signal()");
 
+    // KILL
     if (signal(SIGTERM, clear) == SIG_ERR)
         error("signal()");
 
@@ -140,6 +145,7 @@ int main(int argc, char **argv) {
                 snprintf(u->name, MAX_NAME_LEN, "%d", u->pid);
             }
             
+            // clears in/out
             printf("\n");
             //printf("read: %s from %s in %s|\n", shm_msg->content, u->name, u->channel);
             //printf("cmd: |%s|\n", shm_msg->cmd);
@@ -147,12 +153,16 @@ int main(int argc, char **argv) {
             strncpy(shm_msg->from, u->name, MAX_NAME_LEN);
             
             shm_msg->read = '*';
+
+            // if only registration make as read
             if(strncmp("reg", shm_msg->cmd, 3) == 0) {
                 shm_msg->read = '!';
+            // if command (not msg)
             } else if(strncmp("msg", shm_msg->cmd, 3) != 0) {
                 shm_msg->type = TYPE_SERVER_MSG;
                 command = 1;
                 
+                // if specific command, handle
                 if(strncmp(shm_msg->cmd, "join", 4) == 0) {
                     char chan[MAX_CHAN_LEN];
                     strncpy(chan, shm_msg->content, MAX_CHAN_LEN);
@@ -247,12 +257,15 @@ int main(int argc, char **argv) {
 
                     strncpy(shm_msg->content, resp, MAX_MSG_LENGTH);
                     free(resp);
+                // if wrong command
                 } else {
                     strncpy(shm_msg->content, "WRONG COMMAND! available commands: /info, /chans, /users, /join <channel>, /name <newname>, /pm <username> <msg>.", MAX_MSG_LENGTH);
                 }
                 
+                // if not private message, make it a response from server
                 if(strncmp("pm", shm_msg->cmd, 2) != 0)
                     snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "resp");
+            // if plain message
             } else {
                 st->messages++;
                 strncpy(shm_msg->channel, u->channel, MAX_CHAN_LEN);
@@ -276,6 +289,7 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+// closes open handlers, write statistics
 static void clear(int sig) {
     // remove shared memory file
     if(shm_unlink(SHM_PATH) != 0)
