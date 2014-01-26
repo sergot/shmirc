@@ -77,3 +77,12 @@ int getLine (char *prmpt, char *buff, size_t sz) {
     
     return IN_OK;
 }
+
+// returns position of \n
+int get_newline(char *buf, int size) {
+   int i;
+   for(i = 0; i < size; i++)
+       if(buf[i] == '\n')
+           return i;
+   return -1;
+}

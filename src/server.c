@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <signal.h>
+
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -26,9 +28,10 @@
 #include "help.h"
 #include "settings.h"
 #include "user.h"
+#include "file.h"
 
 // clears memory
-static void clear();
+static void clear(int);
 
 typedef struct ch {
     char name[MAX_CHAN_LEN];
@@ -66,7 +69,19 @@ int chan_exists(char *name, chann *first_channel) {
     return 0;
 }
 
+stats *st = NULL;
+
 int main(int argc, char **argv) {
+    // signal handling
+    if (signal(SIGINT, clear) == SIG_ERR)
+        error("signal()");
+
+    if (signal(SIGTERM, clear) == SIG_ERR)
+        error("signal()");
+
+    if (signal(SIGABRT, clear) == SIG_ERR)
+        error("signal()");
+
     int shmfd, // shared memory file descriptor
         shm_seg_size = sizeof(struct msg); // max shm space size
     
@@ -98,7 +113,11 @@ int main(int argc, char **argv) {
     shm_msg = (struct msg *) mmap(NULL, shm_seg_size, PROT_READ | PROT_WRITE, MAP_SHARED, shmfd, 0);
     if(shm_msg == NULL)
             error("mmap()");
-        
+
+    // read stats
+    st = calloc(1, sizeof(stats));
+    read_stats("stats", st);
+
     int command;
     while(1) {
         fflush(stdin); fflush(stdout);
@@ -109,6 +128,7 @@ int main(int argc, char **argv) {
             user *u = find_user(shm_msg->pid, first_user);
             if(u == NULL) {
                 u = new_user(shm_msg->pid, "", "all");
+                st->users++;
                 if(first_user == NULL)
                     first_user = u;
                 else
@@ -134,6 +154,7 @@ int main(int argc, char **argv) {
                     strncpy(chan, shm_msg->content, MAX_CHAN_LEN);
                     strncpy(u->channel, chan, MAX_CHAN_LEN);
                     if(!chan_exists(chan, first_channel)) {
+                        st->channels++;
                         if(first_channel == NULL) {
                             chann *new_chan = malloc(sizeof(chann));
                             strncpy(new_chan->name, chan, MAX_CHAN_LEN);
@@ -224,6 +245,7 @@ int main(int argc, char **argv) {
                 if(strncmp("pm", shm_msg->cmd, 2) != 0)
                     snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "resp");
             } else {
+                st->messages++;
                 strncpy(shm_msg->channel, u->channel, MAX_CHAN_LEN);
                 shm_msg->type = TYPE_CLIENT_MSG;
                 snprintf(shm_msg->cmd, MAX_CMD_LENGTH, "msg");
@@ -244,12 +266,12 @@ int main(int argc, char **argv) {
         }
     }
     
-    clear();
+    clear(0);
     
     return EXIT_SUCCESS;
 }
 
-static void clear() {
+static void clear(int sig) {
     // remove shared memory file
     if(shm_unlink(SHM_PATH) != 0)
         error("shm_unlink()");
@@ -259,5 +281,6 @@ static void clear() {
         error("sem_unlink()");
     
     // TODO
-    
+    printf("stats[%d,%d,%d]\n", st->channels, st->users, st->messages);
+    write_stats("stats", st);
 }
